@@ -3,6 +3,11 @@ Mahjong Fan Calculator Python
 
 README:[English](https://github.com/ailab-pku/PyMahjongGB/blob/master/README.md)|[中文](https://github.com/ailab-pku/PyMahjongGB/blob/master/README-zh.md)
 
+## Install
+```pip install PyMahjongGB```
+
+## Usage
+
 ```Python
 from MahjongGB import MahjongFanCalculator
 
@@ -38,9 +43,9 @@ from MahjongGB import MahjongFanCalculator
 - return: This function returns a tuple of tuples of two elements each: the fan count and fan name of each fan.
 
 TileCode Table:
-W1 ~ W9 for CHARACTERS,
-T1 ~ T9 for BAMBOOS,
-B1 ~ B9 for DOTS,
-F1 ~ F4 for WINDS,
-J1 ~ J3 for DRAGONS,
-H1 ~ H8 for FLOWERS and SEASONS.
+- W1 ~ W9 for CHARACTERS,
+- T1 ~ T9 for BAMBOOS,
+- B1 ~ B9 for DOTS,
+- F1 ~ F4 for WINDS,
+- J1 ~ J3 for DRAGONS,
+- H1 ~ H8 for FLOWERS and SEASONS.

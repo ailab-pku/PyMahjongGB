@@ -3,6 +3,11 @@ Mahjong Fan Calculator Python
 
 README:[English](https://github.com/ailab-pku/PyMahjongGB/blob/master/README.md)|[中文](https://github.com/ailab-pku/PyMahjongGB/blob/master/README-zh.md)
 
+## 安装
+```pip install PyMahjongGB```
+
+## 使用方式
+
 ```Python
 from MahjongGB import MahjongFanCalculator
 
@@ -35,9 +40,9 @@ from MahjongGB import MahjongFanCalculator
 - 返回值（tuple套tuple）:每组int表示番数，求和为总番数，string是每个番形的描述
 
 牌代码：
-W1~W9：万牌
-T1~T9：条牌
-B1~B9：筒牌
-F1~F4：风牌
-J1~J3：箭牌
-H1~H8：花牌
+- W1~W9：万牌
+- T1~T9：条牌
+- B1~B9：筒牌
+- F1~F4：风牌
+- J1~J3：箭牌
+- H1~H8：花牌
