@@ -8,6 +8,8 @@ README:[English](https://github.com/ailab-pku/PyMahjongGB/blob/master/README.md)
 
 ## Usage
 
+### MahjongFanCalculator
+
 ```Python
 from MahjongGB import MahjongFanCalculator
 
@@ -49,3 +51,23 @@ TileCode Table:
 - F1 ~ F4 for WINDS,
 - J1 ~ J3 for DRAGONS,
 - H1 ~ H8 for FLOWERS and SEASONS.
+
+
+### MahjongShanten
+
+```Python
+from MahjongGB import MahjongShanten
+
+# 计算向听函数
+shanten MahjongShanten(
+    pack = ((packType, tileCode, offer), ...),
+    hand = (tileCode, ...))
+```
+
+- pack: The declared tiles. A tuple of tuples of three elements each:
+        packType of "PENG"/"GANG"/"CHI" for PUNG, KONG and CHOW,
+		tileCode (see details below), middle tile in case of CHOW,
+		offer, 1, 2, 3 for player on left/opposite/right who offers this tile in case of PUNG and KONG, 1, 2, 3 for which tile is offered in case of CHOW.
+- hand: The concealed tiles in hand. A tuple of tileCodes.
+- return: This function returns an integer: shanten
+

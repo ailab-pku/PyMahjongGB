@@ -8,6 +8,8 @@ README:[English](https://github.com/ailab-pku/PyMahjongGB/blob/master/README.md)
 
 ## 使用方式
 
+### MahjongFanCalculator
+
 ```Python
 from MahjongGB import MahjongFanCalculator
 
@@ -46,3 +48,20 @@ from MahjongGB import MahjongFanCalculator
 - F1~F4：风牌
 - J1~J3：箭牌
 - H1~H8：花牌
+
+
+### MahjongShanten
+
+```Python
+from MahjongGB import MahjongShanten
+
+# 计算向听函数
+shanten MahjongShanten(
+    pack = ((packType, tileCode, offer), ...),
+    hand = (tileCode, ...))
+```
+
+- pack（tuple套tuple）:玩家的明牌，每组packType（string）为"PENG" "GANG" "CHI" 三者之一，tileCode（string）为牌代码（吃牌表示中间牌代码），offer（int）碰、杠时123表示上家、对家、下家供牌，吃时123表示第几张是上家供牌。
+- hand（tuple）:玩家的暗牌，tileCode（string）为牌代码
+- 返回值（int）:表示向听数
+

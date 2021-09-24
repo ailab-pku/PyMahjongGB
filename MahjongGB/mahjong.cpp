@@ -1,7 +1,10 @@
 #include <Python.h>
 #include <string>
 #include <unordered_map>
+#include <cmath>
+#include <limits>
 #include "mahjong-algorithm/fan_calculator.h"
+#include "mahjong-algorithm/shanten.h"
 
 using namespace std;
 
@@ -19,7 +22,7 @@ static void MahjongInit() {
 		str2tile["J" + to_string(i)] = mahjong::make_tile(TILE_SUIT_HONORS, i + 4);
 }
 
-static const char *doc = "Calculate Mahjong Fans.\n"
+static const char *doc_calculator = "Calculate Mahjong Fans.\n"
 "Parameters:\n"
 "\tpack - A tuple of fixed packs, each of which is a tuple of form (\"CHI\"/\"PENG\"/\"GANG\", tile, offer:0..3);\n"
 "\thand - A tuple of standing tiles;\n"
@@ -35,6 +38,15 @@ static const char *doc = "Calculate Mahjong Fans.\n"
 "Returns:\n"
 "\tA tuple of fans, each of which is a tuple of form (fan_count, fan_name).\n"
 "\tIf verbose is set to be True, form (fan_point, cnt, fan_name, fan_name_en) is used instead.\n"
+"Raises:"
+"\tTypeError - If any invalid input is encountered.\n";
+
+static const char *doc_shanten = "Calculate Mahjong Shanten.\n"
+"Parameters:\n"
+"\tpack - A tuple of fixed packs, each of which is a tuple of form (\"CHI\"/\"PENG\"/\"GANG\", tile, offer:0..3);\n"
+"\thand - A tuple of standing tiles;\n"
+"Returns:\n"
+"\tAn integer of shanten.\n"
 "Raises:"
 "\tTypeError - If any invalid input is encountered.\n";
 
@@ -122,15 +134,71 @@ static PyObject *MahjongFanCalculator(PyObject *self, PyObject *args, PyObject *
 	}
 }
 
+static PyObject *MahjongShanten(PyObject *self, PyObject *args, PyObject *kwargs) {
+	try {
+		// Parse arguments
+		static char *kwlist[] = {"pack", "hand", nullptr};
+		PyObject *packs = nullptr, *hands = nullptr;
+		if(!PyArg_ParseTupleAndKeywords(args, kwargs, "OO", kwlist, &packs, &hands))
+			return nullptr;
+		// Parse pack tuple
+		if(!PyTuple_Check(packs)) throw "Param `pack` must be a tuple!";
+		int packSize = PyTuple_Size(packs);
+		mahjong::hand_tiles_t hand_tiles;
+		hand_tiles.pack_count = packSize;
+		for(int i = 0; i < packSize; ++i) {
+			// Parse pack info
+			PyObject *pack = PyTuple_GET_ITEM(packs, i);
+			if(!PyTuple_Check(pack)) throw "Param `pack` must be a tuple of tuples!";
+			const char *type = nullptr, *tile = nullptr;
+			int offer, packCode;
+			if(!PyArg_ParseTuple(pack, "ssi", &type, &tile, &offer)) return nullptr;
+			if(str2tile.find(tile) == str2tile.end()) throw "ERROE_WRONG_TILE_CODE";
+			if(offer < 0 || offer >= 4) throw "ERROE_WRONG_OFFER_CODE";
+			if(!strcmp(type, "PENG")) packCode = PACK_TYPE_PUNG;
+			else if(!strcmp(type, "GANG")) packCode = PACK_TYPE_KONG;
+			else if(!strcmp(type, "CHI")) packCode = PACK_TYPE_CHOW;
+			else throw "ERROE_WRONG_PACK_CODE";
+			hand_tiles.fixed_packs[i] = mahjong::make_pack(offer, packCode, str2tile[tile]);
+		}
+		// Parse hand tuple
+		if(!PyTuple_Check(hands)) throw "Param `hand` must be a tuple!";
+		int handSize = PyTuple_Size(hands);
+		hand_tiles.tile_count = handSize;
+		for(int i = 0; i < handSize; ++i) {
+			// Parse hand tile
+			PyObject *hand = PyTuple_GET_ITEM(hands, i);
+			if(!PyUnicode_Check(hand)) throw "Param `hand` must be a tuple of strs!";
+			const char *tile = PyUnicode_AsUTF8(hand);
+			if(str2tile.find(tile) == str2tile.end()) throw "ERROE_WRONG_TILE_CODE";
+			hand_tiles.standing_tiles[i] = str2tile[tile];
+		}
+		int re = numeric_limits<int>::max();
+		re = min(re, mahjong::thirteen_orphans_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
+		re = min(re, mahjong::seven_pairs_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
+		re = min(re, mahjong::honors_and_knitted_tiles_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
+		re = min(re, mahjong::knitted_straight_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
+		re = min(re, mahjong::basic_form_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
+		if (re == numeric_limits<int>::max()) throw "ERROR_INVALID_HAND_OR_PACK";
+		PyObject *ans = Py_BuildValue("i", re);
+		return ans;
+	} catch (const char *msg) {
+		PyErr_SetString(PyExc_TypeError, msg);
+		return nullptr;
+	}
+}
+
+
 static PyMethodDef methods[] = {
-	{"MahjongFanCalculator", (PyCFunction)(void(*)(void))MahjongFanCalculator, METH_VARARGS | METH_KEYWORDS, doc},
+	{"MahjongFanCalculator", (PyCFunction)(void(*)(void))MahjongFanCalculator, METH_VARARGS | METH_KEYWORDS, doc_calculator},
+	{"MahjongShanten", (PyCFunction)(void(*)(void))MahjongShanten, METH_VARARGS | METH_KEYWORDS, doc_shanten},
 	{NULL, NULL, 0, NULL},
 };
 
 static PyModuleDef module = {
     PyModuleDef_HEAD_INIT,
     "MahjongGB",
-    "Library to calculate fans in Chinese Standard Mahjong.",
+    "Library to calculate fans and shanten in Chinese Standard Mahjong.",
     -1,
     methods,
 };
