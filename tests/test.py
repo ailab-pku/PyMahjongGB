@@ -1,7 +1,9 @@
-from MahjongGB import MahjongFanCalculator
+from MahjongGB import MahjongFanCalculator, MahjongShanten
 
 # Non-positional arguments
 print(MahjongFanCalculator((),("W1","W1","W1","W2","W2","W2","W3","W3","W3","W4","W4","W4","W5"),"W5",1,True,False,False,True,0,0))
+print(MahjongShanten((),("W1","W1","W1","W2","W2","W2","W3","W3","W3","W4","W4","W4","W5")))
+print(MahjongShanten((),("W1","B1","T1","W2","W2","W2","W3","J3","F3","F4","W4","W4","W9")))
 
 # Support keyword arguments
 print(MahjongFanCalculator(
@@ -15,6 +17,10 @@ print(MahjongFanCalculator(
     , isWallLast = False
     , seatWind = 0
     , prevalentWind = 0
+))
+print(MahjongShanten(
+    pack = (("GANG","W1",2),)
+    , hand = ("W1","B1","T1","W2","W2","W2","W3","J3","F3","F4")
 ))
 
 # Support mixed arguments with unarranged keyword arguments, as well as verbose mode
@@ -31,6 +37,10 @@ print(MahjongFanCalculator(
     , flowerCount = 2
     , verbose = True
 ))
+print(MahjongShanten(
+    (("GANG","W1",2),)
+    , hand = ("W1","B1","T1","W2","W2","W2","W3","J3","F3","F4")
+))
 
 # Wrong tile count
 try:
@@ -43,6 +53,14 @@ else:
 # Not win
 try:
     ans = MahjongFanCalculator((("CHI","W1",0),),("W2","W2","W2","W3","W3","W3","W4","W4","W4","W5"),"W7",1,False,False,False,False,0,0)
+except Exception as err:
+    print(err)
+else:
+    print(ans)
+
+# Wrong tile count
+try:
+    ans = MahjongShanten((),("W1","W1","W1","W2","W2","W2","W3","W3","W3","W4","W4","W4"))
 except Exception as err:
     print(err)
 else:
