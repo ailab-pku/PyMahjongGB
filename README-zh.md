@@ -8,6 +8,8 @@ README:[English](https://github.com/ailab-pku/PyMahjongGB/blob/master/README.md)
 
 ## 使用方式
 
+### MahjongFanCalculator
+
 ```Python
 from MahjongGB import MahjongFanCalculator
 
@@ -47,6 +49,8 @@ from MahjongGB import MahjongFanCalculator
 - J1~J3：箭牌
 - H1~H8：花牌
 
+
+### MahjongShanten
 
 ```Python
 from MahjongGB import MahjongShanten

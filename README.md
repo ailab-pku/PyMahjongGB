@@ -8,6 +8,8 @@ README:[English](https://github.com/ailab-pku/PyMahjongGB/blob/master/README.md)
 
 ## Usage
 
+### MahjongFanCalculator
+
 ```Python
 from MahjongGB import MahjongFanCalculator
 
@@ -50,6 +52,8 @@ TileCode Table:
 - J1 ~ J3 for DRAGONS,
 - H1 ~ H8 for FLOWERS and SEASONS.
 
+
+### MahjongShanten
 
 ```Python
 from MahjongGB import MahjongShanten
