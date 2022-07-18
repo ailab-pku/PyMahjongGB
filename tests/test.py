@@ -20,7 +20,7 @@ print(MahjongFanCalculator(
 ))
 print(MahjongShanten(
     pack = (("GANG","W1",2),)
-    , hand = ("W1","B1","T1","W2","W2","W2","W3","J3","F3","F4")
+    , hand = ("B1","B1","T1","W2","W2","W2","W3","J3","F3","F4")
 ))
 
 # Support mixed arguments with unarranged keyword arguments, as well as verbose mode
