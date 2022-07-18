@@ -65,3 +65,67 @@ shanten MahjongShanten(
 - hand（tuple）:玩家的暗牌，tileCode（string）为牌代码
 - 返回值（int）:表示向听数
 
+### ThirteenOrphansShanten
+
+```Python
+from MahjongGB import ThirteenOrphansShanten
+
+# 计算十三幺向听数，手牌必须13张
+(shanten, useful) = ThirteenOrphansShanten(
+    hand = (tileCode, ...))
+```
+
+- hand（tuple）:玩家的暗牌，tileCode（string）为牌代码
+- 返回值（tuple）:包含一个整数表示向听数，以及一个tuple表示有效牌列表
+
+### SevenPairsShanten
+
+```Python
+from MahjongGB import SevenPairsShanten
+
+# 计算七对向听数，手牌必须13张
+(shanten, useful) = SevenPairsShanten(
+    hand = (tileCode, ...))
+```
+
+- hand（tuple）:玩家的暗牌，tileCode（string）为牌代码
+- 返回值（tuple）:包含一个整数表示向听数，以及一个tuple表示有效牌列表
+
+### HonorsAndKnittedTilesShanten
+
+```Python
+from MahjongGB import HonorsAndKnittedTilesShanten
+
+# 计算全不靠向听数，手牌必须13张
+(shanten, useful) = HonorsAndKnittedTilesShanten(
+    hand = (tileCode, ...))
+```
+
+- hand（tuple）:玩家的暗牌，tileCode（string）为牌代码
+- 返回值（tuple）:包含一个整数表示向听数，以及一个tuple表示有效牌列表
+
+### KnittedStraightShanten
+
+```Python
+from MahjongGB import KnittedStraightShanten
+
+# 计算组合龙向听数，手牌必须10张或者13张
+(shanten, useful) = KnittedStraightShanten(
+    hand = (tileCode, ...))
+```
+
+- hand（tuple）:玩家的暗牌，tileCode（string）为牌代码
+- 返回值（tuple）:包含一个整数表示向听数，以及一个tuple表示有效牌列表
+
+### RegularShanten
+
+```Python
+from MahjongGB import RegularShanten
+
+# 计算基本胡型的向听数，手牌可以是1, 4, 7, 10, 13张
+(shanten, useful) = RegularShanten(
+    hand = (tileCode, ...))
+```
+
+- hand（tuple）:玩家的暗牌，tileCode（string）为牌代码
+- 返回值（tuple）:包含一个整数表示向听数，以及一个tuple表示有效牌列表

@@ -1,7 +1,7 @@
 #include <Python.h>
 #include <string>
 #include <unordered_map>
-#include <cmath>
+#include <algorithm>
 #include <limits>
 #include "mahjong-algorithm/fan_calculator.h"
 #include "mahjong-algorithm/shanten.h"
@@ -9,6 +9,12 @@
 using namespace std;
 
 static unordered_map<string, mahjong::tile_t> str2tile;
+static const char* tile2str[34] = {
+"W1","W2","W3","W4","W5","W6","W7","W8","W9",
+"T1","T2","T3","T4","T5","T6","T7","T8","T9",
+"B1","B2","B3","B4","B5","B6","B7","B8","B9",
+"F1","F2","F3","F4","J1","J2","J3"
+};
 
 static void MahjongInit() {
 	for(int i = 1; i <= 9; ++i) {
@@ -49,6 +55,21 @@ static const char *doc_shanten = "Calculate Mahjong Shanten.\n"
 "\tAn integer of shanten.\n"
 "Raises:"
 "\tTypeError - If any invalid input is encountered.\n";
+
+#define SHANTEN_DOC_TEMPLATE(name, func) \
+static const char *doc_##func = "Calculate Mahjong Shanten For " #name ".\n" \
+"Parameters:\n" \
+"\thand - A tuple of standing tiles;\n" \
+"Returns:\n" \
+"\tA tuple of (shanten, useful), where shanten is an integer, useful is a tuple of useful tiles.\n" \
+"Raises:" \
+"\tTypeError - If any invalid input is encountered.\n";
+
+SHANTEN_DOC_TEMPLATE(Thirteen Orphans, thirteen_orphans_shanten)
+SHANTEN_DOC_TEMPLATE(Seven Pairs, seven_pairs_shanten)
+SHANTEN_DOC_TEMPLATE(Honors And Knitted Tiles, honors_and_knitted_tiles_shanten)
+SHANTEN_DOC_TEMPLATE(Knitted Straight, knitted_straight_shanten)
+SHANTEN_DOC_TEMPLATE(Regular Form, basic_form_shanten)
 
 static PyObject *MahjongFanCalculator(PyObject *self, PyObject *args, PyObject *kwargs) {
 	try {
@@ -188,10 +209,64 @@ static PyObject *MahjongShanten(PyObject *self, PyObject *args, PyObject *kwargs
 	}
 }
 
+#define SHANTEN_TEMPLATE(name, func) \
+static PyObject *name(PyObject *self, PyObject *args, PyObject *kwargs) { \
+	try { \
+		/* Parse arguments */ \
+		static char *kwlist[] = {"hand", nullptr}; \
+		PyObject *hands = nullptr; \
+		if(!PyArg_ParseTupleAndKeywords(args, kwargs, "O", kwlist, &hands)) \
+			return nullptr; \
+		mahjong::hand_tiles_t hand_tiles; \
+		mahjong::useful_table_t useful_table; \
+		/* Parse hand tuple */ \
+		if(!PyTuple_Check(hands)) throw "Param `hand` must be a tuple!"; \
+		int handSize = PyTuple_Size(hands); \
+		hand_tiles.tile_count = handSize; \
+		for(int i = 0; i < handSize; ++i) { \
+			/* Parse hand tile */ \
+			PyObject *hand = PyTuple_GET_ITEM(hands, i); \
+			if(!PyUnicode_Check(hand)) throw "Param `hand` must be a tuple of strs!"; \
+			const char *tile = PyUnicode_AsUTF8(hand); \
+			if(str2tile.find(tile) == str2tile.end()) throw "ERROE_WRONG_TILE_CODE"; \
+			hand_tiles.standing_tiles[i] = str2tile[tile]; \
+		} \
+		int re = mahjong::##func(hand_tiles.standing_tiles, hand_tiles.tile_count, &useful_table); \
+		if (re == numeric_limits<int>::max()) throw "ERROR_INVALID_HAND"; \
+		int usefulSize = 0, l = 0; \
+		for(int i = 0; i < 34; ++i) \
+			if(useful_table[mahjong::all_tiles[i]]) \
+				++usefulSize; \
+		PyObject *useful = PyTuple_New(usefulSize); \
+		for(int i = 0; i < 34; ++i) \
+			if(useful_table[mahjong::all_tiles[i]]) \
+				PyTuple_SetItem(useful, l++, Py_BuildValue("s", tile2str[i])); \
+		PyObject *ans = Py_BuildValue("(iO)", re, useful); \
+		return ans; \
+	} catch (const char *msg) { \
+		PyErr_SetString(PyExc_TypeError, msg); \
+		return nullptr; \
+	} \
+}
+
+SHANTEN_TEMPLATE(ThirteenOrphansShanten, thirteen_orphans_shanten)
+SHANTEN_TEMPLATE(SevenPairsShanten, seven_pairs_shanten)
+SHANTEN_TEMPLATE(HonorsAndKnittedTilesShanten, honors_and_knitted_tiles_shanten)
+SHANTEN_TEMPLATE(KnittedStraightShanten, knitted_straight_shanten)
+SHANTEN_TEMPLATE(RegularShanten, basic_form_shanten)
+
+#define SHANTEN_METHOD_TEMPLATE(name, func) \
+{#name, (PyCFunction)(void(*)(void))name, METH_VARARGS | METH_KEYWORDS, doc_##func},
+
 
 static PyMethodDef methods[] = {
 	{"MahjongFanCalculator", (PyCFunction)(void(*)(void))MahjongFanCalculator, METH_VARARGS | METH_KEYWORDS, doc_calculator},
 	{"MahjongShanten", (PyCFunction)(void(*)(void))MahjongShanten, METH_VARARGS | METH_KEYWORDS, doc_shanten},
+	SHANTEN_METHOD_TEMPLATE(ThirteenOrphansShanten, thirteen_orphans_shanten)
+	SHANTEN_METHOD_TEMPLATE(SevenPairsShanten, seven_pairs_shanten)
+	SHANTEN_METHOD_TEMPLATE(HonorsAndKnittedTilesShanten, honors_and_knitted_tiles_shanten)
+	SHANTEN_METHOD_TEMPLATE(KnittedStraightShanten, knitted_straight_shanten)
+	SHANTEN_METHOD_TEMPLATE(RegularShanten, basic_form_shanten)
 	{NULL, NULL, 0, NULL},
 };
 

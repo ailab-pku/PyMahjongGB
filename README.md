@@ -58,7 +58,7 @@ TileCode Table:
 ```Python
 from MahjongGB import MahjongShanten
 
-# 计算向听函数
+# 计算向听数
 shanten MahjongShanten(
     pack = ((packType, tileCode, offer), ...),
     hand = (tileCode, ...))
@@ -69,5 +69,69 @@ shanten MahjongShanten(
 		tileCode (see details below), middle tile in case of CHOW,
 		offer, 1, 2, 3 for player on left/opposite/right who offers this tile in case of PUNG and KONG, 1, 2, 3 for which tile is offered in case of CHOW.
 - hand: The concealed tiles in hand. A tuple of tileCodes.
-- return: This function returns an integer: shanten
+- return: This function returns an integer: shanten.
 
+### ThirteenOrphansShanten
+
+```Python
+from MahjongGB import ThirteenOrphansShanten
+
+# 计算十三幺向听数，手牌必须13张
+(shanten, useful) = ThirteenOrphansShanten(
+    hand = (tileCode, ...))
+```
+
+- hand: The concealed tiles in hand. A tuple of tileCodes.
+- return: This function returns a tuple: an integer shanten and a tuple consisting of tilecodes of useful tiles.
+
+### SevenPairsShanten
+
+```Python
+from MahjongGB import SevenPairsShanten
+
+# 计算七对向听数，手牌必须13张
+(shanten, useful) = SevenPairsShanten(
+    hand = (tileCode, ...))
+```
+
+- hand: The concealed tiles in hand. A tuple of tileCodes.
+- return: This function returns a tuple: an integer shanten and a tuple consisting of tilecodes of useful tiles.
+
+### HonorsAndKnittedTilesShanten
+
+```Python
+from MahjongGB import HonorsAndKnittedTilesShanten
+
+# 计算全不靠向听数，手牌必须13张
+(shanten, useful) = HonorsAndKnittedTilesShanten(
+    hand = (tileCode, ...))
+```
+
+- hand: The concealed tiles in hand. A tuple of tileCodes.
+- return: This function returns a tuple: an integer shanten and a tuple consisting of tilecodes of useful tiles.
+
+### KnittedStraightShanten
+
+```Python
+from MahjongGB import KnittedStraightShanten
+
+# 计算组合龙向听数，手牌必须10张或者13张
+(shanten, useful) = KnittedStraightShanten(
+    hand = (tileCode, ...))
+```
+
+- hand: The concealed tiles in hand. A tuple of tileCodes.
+- return: This function returns a tuple: an integer shanten and a tuple consisting of tilecodes of useful tiles.
+
+### RegularShanten
+
+```Python
+from MahjongGB import RegularShanten
+
+# 计算基本胡型的向听数，手牌可以是1, 4, 7, 10, 13张
+(shanten, useful) = RegularShanten(
+    hand = (tileCode, ...))
+```
+
+- hand: The concealed tiles in hand. A tuple of tileCodes.
+- return: This function returns a tuple: an integer shanten and a tuple consisting of tilecodes of useful tiles.
