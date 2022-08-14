@@ -231,7 +231,7 @@ static PyObject *name(PyObject *self, PyObject *args, PyObject *kwargs) { \
 			if(str2tile.find(tile) == str2tile.end()) throw "ERROE_WRONG_TILE_CODE"; \
 			hand_tiles.standing_tiles[i] = str2tile[tile]; \
 		} \
-		int re = mahjong::##func(hand_tiles.standing_tiles, hand_tiles.tile_count, &useful_table); \
+		int re = mahjong::func(hand_tiles.standing_tiles, hand_tiles.tile_count, &useful_table); \
 		if (re == numeric_limits<int>::max()) throw "ERROR_INVALID_HAND"; \
 		int usefulSize = 0, l = 0; \
 		for(int i = 0; i < 34; ++i) \
