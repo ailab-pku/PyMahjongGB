@@ -1771,6 +1771,7 @@ static bool calculate_knitted_straight_fan(const calculate_param_t *calculate_pa
     tile_table_t cnt_table;
     map_tiles(hand_tiles->standing_tiles, standing_cnt, &cnt_table);
     ++cnt_table[win_tile];
+	bool single_wait_flag = cnt_table[win_tile] > 1;
 
     // 匹配组合龙
     const tile_t (*matched_seq)[9] = std::find_if(&standard_knitted_straight[0], &standard_knitted_straight[6],
@@ -1839,22 +1840,20 @@ static bool calculate_knitted_straight_fan(const calculate_param_t *calculate_pa
     // 四归一调整
     adjust_by_tiles_hog(tiles, tile_cnt, fan_table);
 
-    // 和牌张是组合龙范围的牌，不计边张、嵌张、单钓将
-    if (std::none_of(std::begin(*matched_seq), std::end(*matched_seq), [win_tile](tile_t t) { return t == win_tile; })) {
-        if (fixed_cnt == 0) {  // 门清的牌有可能存在边张、嵌张、单钓将
-            // 将除去组合龙的部分恢复成牌
-            --cnt_table[win_tile];
-            tile_t temp[4];
-            intptr_t cnt = table_to_tiles(cnt_table, temp, 4);
+    // 和牌张是组合龙范围的牌，也加计边张、嵌张、单钓将
+	if (fixed_cnt == 0) {  // 门清的牌有可能存在边张、嵌张、单钓将
+		// 将除去组合龙的部分恢复成牌
+		--cnt_table[win_tile];
+		tile_t temp[4];
+		intptr_t cnt = table_to_tiles(cnt_table, temp, 4);
 
-            // 根据听牌方式调整——涉及番种：边张、嵌张、单钓将
-            adjust_by_waiting_form(packs + 3, 2, temp, cnt, win_tile, fan_table);
-        }
-        else {
-            // 非门清状态如果听牌不在组合龙范围内，必然是单钓将
-            fan_table[SINGLE_WAIT] = 1;
-        }
-    }
+		// 根据听牌方式调整——涉及番种：边张、嵌张、单钓将
+		adjust_by_waiting_form(packs + 3, 2, temp, cnt, win_tile, fan_table);
+	}
+	else if (single_wait_flag) {
+		// 非门清状态如果听牌至少已有一张，是单钓将
+		fan_table[SINGLE_WAIT] = 1;
+	}
 
     // 统一调整一些不计的
     adjust_fan_table(fan_table);
