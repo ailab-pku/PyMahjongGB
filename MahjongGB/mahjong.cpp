@@ -241,7 +241,7 @@ static PyObject *name(PyObject *self, PyObject *args, PyObject *kwargs) { \
 		for(int i = 0; i < 34; ++i) \
 			if(useful_table[mahjong::all_tiles[i]]) \
 				PyTuple_SetItem(useful, l++, Py_BuildValue("s", tile2str[i])); \
-		PyObject *ans = Py_BuildValue("(iO)", re, useful); \
+		PyObject *ans = Py_BuildValue("(iN)", re, useful); \
 		return ans; \
 	} catch (const char *msg) { \
 		PyErr_SetString(PyExc_TypeError, msg); \

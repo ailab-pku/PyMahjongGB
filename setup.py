@@ -7,7 +7,7 @@ module = Extension('MahjongGB', sources=[
     ], language='c++', extra_compile_args = ["-std=c++11"])
 
 setup(name = "PyMahjongGB",
-    version = "1.2.0",
+    version = "1.3.0",
     author = "Yunlong Lu",
     author_email = "luyunlong@pku.edu.cn",
     description = "A library for Fan Calculation of Mahjong in Chinese Standard Rule.",
