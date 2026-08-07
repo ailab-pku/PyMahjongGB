@@ -1,5 +1,5 @@
 ﻿/****************************************************************************
- Copyright (c) 2016-2020 Jeff Wang <summer_insects@163.com>
+ Copyright (c) 2016-2023 Jeff Wang <summer_insects@163.com>
 
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
@@ -25,7 +25,11 @@
 
 #include "tile.h"
 
-#define SUPPORT_CONCEALED_KONG_AND_MELDED_KONG 1  // 支持明暗杠
+#define SUPPORT_CONCEALED_KONG_AND_MELDED_KONG      1  // 支持明暗杠
+#define KNITTED_STRAIGHT_BODY_WITH_ECS              1  // 组合龙龙身的边嵌钓
+#define DISTINGUISH_PURE_SHIFTED_CHOWS              0  // 区分一色三（四）步的宽窄
+#define NINE_GATES_WHEN_BLESSING_OF_HEAVEN          1  // 天和支持九莲宝灯
+#define SUPPORT_BLESSINGS                           0  // 支持天和、地和、人和
 
 namespace mahjong {
 
@@ -57,7 +61,12 @@ enum fan_t {
     QUADRUPLE_CHOW,                     ///< 一色四同顺
     FOUR_PURE_SHIFTED_PUNGS,            ///< 一色四节高
 
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+    FOUR_PURE_SHIFTED_CHOWS_1,          ///< 一色四步高Ⅰ
+    FOUR_PURE_SHIFTED_CHOWS_2,          ///< 一色四步高Ⅱ
+#else
     FOUR_PURE_SHIFTED_CHOWS,            ///< 一色四步高
+#endif
     THREE_KONGS,                        ///< 三杠
     ALL_TERMINALS_AND_HONORS,           ///< 混幺九
 
@@ -73,7 +82,12 @@ enum fan_t {
 
     PURE_STRAIGHT,                      ///< 清龙
     THREE_SUITED_TERMINAL_CHOWS,        ///< 三色双龙会
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+    PURE_SHIFTED_CHOWS_1,               ///< 一色三步高Ⅰ
+    PURE_SHIFTED_CHOWS_2,               ///< 一色三步高Ⅱ
+#else
     PURE_SHIFTED_CHOWS,                 ///< 一色三步高
+#endif
     ALL_FIVE,                           ///< 全带五
     TRIPLE_PUNG,                        ///< 三同刻
     THREE_CONCEALED_PUNGS,              ///< 三暗刻
@@ -126,15 +140,22 @@ enum fan_t {
     MELDED_KONG,                        ///< 明杠
     ONE_VOIDED_SUIT,                    ///< 缺一门
     NO_HONORS,                          ///< 无字
-    EDGE_WAIT,                          ///< 边张
-    CLOSED_WAIT,                        ///< 嵌张
-    SINGLE_WAIT,                        ///< 单钓将
+    EDGE_WAIT,                          ///< 独听・边张
+    CLOSED_WAIT,                        ///< 独听・嵌张
+    SINGLE_WAIT,                        ///< 独听・单钓
     SELF_DRAWN,                         ///< 自摸
 
     FLOWER_TILES,                       ///< 花牌
 
 #if SUPPORT_CONCEALED_KONG_AND_MELDED_KONG
     CONCEALED_KONG_AND_MELDED_KONG,     ///< 明暗杠
+#endif
+
+#if SUPPORT_BLESSINGS
+    BLESSING_OF_HEAVEN,                 ///< 天和
+    BLESSING_OF_EARTH,                  ///< 地和
+    BLESSING_OF_HUMAN_1,                ///< 人和Ⅰ（点和）
+    BLESSING_OF_HUMAN_2,                ///< 人和Ⅱ（自摸）
 #endif
 
     FAN_TABLE_SIZE
@@ -156,12 +177,12 @@ typedef uint8_t win_flag_t;
  * @name win flag
  * @{
  */
-#define WIN_FLAG_DISCARD    0   ///< 点和
-#define WIN_FLAG_SELF_DRAWN 1   ///< 自摸
-#define WIN_FLAG_4TH_TILE   2   ///< 绝张
-#define WIN_FLAG_ABOUT_KONG 4   ///< 关于杠，复合点和时为枪杠和，复合自摸则为杠上开花
-#define WIN_FLAG_WALL_LAST  8   ///< 牌墙最后一张，复合点和时为海底捞月，复合自摸则为妙手回春
-#define WIN_FLAG_INIT       16  ///< 起手，复合点和时为地和，复合自摸则为天和
+#define WIN_FLAG_DISCARD        0   ///< 点和
+#define WIN_FLAG_SELF_DRAWN     1   ///< 自摸
+#define WIN_FLAG_LAST_TILE      2   ///< 绝张
+#define WIN_FLAG_KONG_INVOLVED  4   ///< 关于杠，复合点和时为抢杠和，复合自摸则为杠上开花
+#define WIN_FLAG_WALL_LAST      8   ///< 牌墙最后一张，复合点和时为海底捞月，复合自摸则为妙手回春
+#define WIN_FLAG_INITIAL        16  ///< 起手，复合点和时为地和（庄家点）或人和（闲家点），复合自摸则为天和（庄家）或人和（闲家）
 
 /**
  * @}
@@ -172,22 +193,11 @@ typedef uint8_t win_flag_t;
  * @{
  */
 #define ERROR_WRONG_TILES_COUNT -1              ///< 错误的张数
-#define ERROR_TILE_COUNT_GREATER_THAN_4 -2      ///< 某张牌出现超过4枚
+#define ERROR_TILE_MORE_THAN_4 -2               ///< 某张牌出现超过4枚
 #define ERROR_NOT_WIN -3                        ///< 没和牌
 /**
  * @}
  */
-
-/**
- * @brief 检查算番的输入是否合法
- *
- * @param [in] hand_tiles 手牌
- * @param [in] win_tile 和牌张
- * @retval 0 成功
- * @retval ERROR_WRONG_TILES_COUNT 错误的张数
- * @retval ERROR_TILE_COUNT_GREATER_THAN_4 某张牌出现超过4枚
- */
-int check_calculator_input(const hand_tiles_t *hand_tiles, tile_t win_tile);
 
 /**
  * @brief 算番参数
@@ -218,29 +228,70 @@ typedef uint16_t fan_table_t[FAN_TABLE_SIZE];
  */
 int calculate_fan(const calculate_param_t *calculate_param, fan_table_t *fan_table);
 
+#if SUPPORT_BLESSINGS
+/**
+ * @brief 撤销天地人和
+ *
+ * @param [out] fan_table 番表
+ * @retval 番数校正
+ */
+int revoke_blessings(fan_table_t &fan_table);
+#endif
+
+// unused
+#ifndef UNUSED
+#if __cplusplus >= 201703L
+#define UNUSED [[maybe_unused]]
+#else
+#if defined(__GNUC__)
+#define UNUSED __attribute__((__unused__))
+#else
+#define UNUSED
+#endif
+#endif
+#endif
+
+#if 0
+
 /**
  * @brief 番名（英文）
  */
-static const char *fan_name_en[] = {
+UNUSED static const char *fan_name[] = {
     "None",
     "Big Four Winds", "Big Three Dragons", "All Green", "Nine Gates", "Four Kongs", "Seven Shifted Pairs", "Thirteen Orphans",
     "All Terminals", "Little Four Winds", "Little Three Dragons", "All Honors", "Four Concealed Pungs", "Pure Terminal Chows",
     "Quadruple Chow", "Four Pure Shifted Pungs",
-    "Four Pure Shifted Chows", "Three Kongs", "All Terminals and Honors",
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+    "Four Pure Shifted Chows I", "Four Pure Shifted Chows II",
+#else
+    "Four Pure Shifted Chows",
+#endif
+    "Three Kongs", "All Terminals and Honors",
     "Seven Pairs", "Greater Honors and Knitted Tiles", "All Even Pungs", "Full Flush", "Pure Triple Chow", "Pure Shifted Pungs", "Upper Tiles", "Middle Tiles", "Lower Tiles",
-    "Pure Straight", "Three-Suited Terminal Chows", "Pure Shifted Chows", "All Five", "Triple Pung", "Three Concealed Pungs",
+    "Pure Straight", "Three-Suited Terminal Chows",
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+    "Pure Shifted Chows I", "Pure Shifted Chows II",
+#else
+    "Pure Shifted Chows",
+#endif
+    "All Five", "Triple Pung", "Three Concealed Pungs",
     "Lesser Honors and Knitted Tiles", "Knitted Straight", "Upper Four", "Lower Four", "Big Three Winds",
     "Mixed Straight", "Reversible Tiles", "Mixed Triple Chow", "Mixed Shifted Pungs", "Chicken Hand", "Last Tile Draw", "Last Tile Claim", "Out with Replacement Tile", "Robbing The Kong",
     "All Pungs", "Half Flush", "Mixed Shifted Chows", "All Types", "Melded Hand", "Two Concealed Kongs", "Two Dragons Pungs",
     "Outside Hand", "Fully Concealed Hand", "Two Melded Kongs", "Last Tile",
     "Dragon Pung", "Prevalent Wind", "Seat Wind", "Concealed Hand", "All Chows", "Tile Hog", "Double Pung",
     "Two Concealed Pungs", "Concealed Kong", "All Simples",
-    "Pure Double Chow", "Mixed Double Chow", "Short Straight", "Two Terminal Chows", "Pung of Terminals or Honors", "Melded Kong", "One Voided Suit", "No Honors", "Edge Wait", "Closed Wait", "Single Wait", "Self-Drawn",
+    "Pure Double Chow", "Mixed Double Chow", "Short Straight", "Two Terminal Chows", "Pung of Terminals or Honors", "Melded Kong", "One Voided Suit", "No Honors", "Unique Wait (Edge)", "Unique Wait (Closed)", "Unique Wait (Single)", "Self-Drawn",
     "Flower Tiles"
 #if SUPPORT_CONCEALED_KONG_AND_MELDED_KONG
     , "Concealed Kong and Melded Kong"
 #endif
+#if SUPPORT_BLESSINGS
+    , "Blessing of Heaven", "Blessing of Earth", "Blessing of Human I", "Blessing of Human II"
+#endif
 };
+
+#else
 
 #ifdef _MSC_VER
 #pragma execution_character_set("utf-8")
@@ -263,25 +314,41 @@ static const char *fan_name_en[] = {
 /**
  * @brief 番名（简体中文）
  */
-static const char *fan_name[] = {
+UNUSED static const char *fan_name[] = {
     __UTF8("无"),
     __UTF8("大四喜"), __UTF8("大三元"), __UTF8("绿一色"), __UTF8("九莲宝灯"), __UTF8("四杠"), __UTF8("连七对"), __UTF8("十三幺"),
     __UTF8("清幺九"), __UTF8("小四喜"), __UTF8("小三元"), __UTF8("字一色"), __UTF8("四暗刻"), __UTF8("一色双龙会"),
     __UTF8("一色四同顺"), __UTF8("一色四节高"),
-    __UTF8("一色四步高"), __UTF8("三杠"), __UTF8("混幺九"),
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+    __UTF8("一色四步高Ⅰ"), __UTF8("一色四步高Ⅱ"),
+#else
+    __UTF8("一色四步高"),
+#endif
+    __UTF8("三杠"), __UTF8("混幺九"),
     __UTF8("七对"), __UTF8("七星不靠"), __UTF8("全双刻"), __UTF8("清一色"), __UTF8("一色三同顺"), __UTF8("一色三节高"), __UTF8("全大"), __UTF8("全中"), __UTF8("全小"),
-    __UTF8("清龙"), __UTF8("三色双龙会"), __UTF8("一色三步高"), __UTF8("全带五"), __UTF8("三同刻"), __UTF8("三暗刻"),
+    __UTF8("清龙"), __UTF8("三色双龙会"),
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+    __UTF8("一色三步高Ⅰ"), __UTF8("一色三步高Ⅱ"),
+#else
+    __UTF8("一色三步高"),
+#endif
+    __UTF8("全带五"), __UTF8("三同刻"), __UTF8("三暗刻"),
     __UTF8("全不靠"), __UTF8("组合龙"), __UTF8("大于五"), __UTF8("小于五"), __UTF8("三风刻"),
     __UTF8("花龙"), __UTF8("推不倒"), __UTF8("三色三同顺"), __UTF8("三色三节高"), __UTF8("无番和"), __UTF8("妙手回春"), __UTF8("海底捞月"), __UTF8("杠上开花"), __UTF8("抢杠和"),
     __UTF8("碰碰和"), __UTF8("混一色"), __UTF8("三色三步高"), __UTF8("五门齐"), __UTF8("全求人"), __UTF8("双暗杠"), __UTF8("双箭刻"),
     __UTF8("全带幺"), __UTF8("不求人"), __UTF8("双明杠"), __UTF8("和绝张"),
     __UTF8("箭刻"), __UTF8("圈风刻"), __UTF8("门风刻"), __UTF8("门前清"), __UTF8("平和"), __UTF8("四归一"), __UTF8("双同刻"), __UTF8("双暗刻"), __UTF8("暗杠"), __UTF8("断幺"),
-    __UTF8("一般高"), __UTF8("喜相逢"), __UTF8("连六"), __UTF8("老少副"), __UTF8("幺九刻"), __UTF8("明杠"), __UTF8("缺一门"), __UTF8("无字"), __UTF8("边张"), __UTF8("嵌张"), __UTF8("单钓将"), __UTF8("自摸"),
+    __UTF8("一般高"), __UTF8("喜相逢"), __UTF8("连六"), __UTF8("老少副"), __UTF8("幺九刻"), __UTF8("明杠"), __UTF8("缺一门"), __UTF8("无字"), __UTF8("独听・边张"), __UTF8("独听・嵌张"), __UTF8("独听・单钓"), __UTF8("自摸"),
     __UTF8("花牌")
 #if SUPPORT_CONCEALED_KONG_AND_MELDED_KONG
     , __UTF8("明暗杠")
 #endif
+#if SUPPORT_BLESSINGS
+    , __UTF8("天和"), __UTF8("地和"), __UTF8("人和Ⅰ"), __UTF8("人和Ⅱ")
+#endif
 };
+
+#endif
 
 /**
  * @brief 番值
@@ -291,8 +358,14 @@ static const uint16_t fan_value_table[FAN_TABLE_SIZE] = {
     88, 88, 88, 88, 88, 88, 88,
     64, 64, 64, 64, 64, 64,
     48, 48,
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+    32,
+#endif
     32, 32, 32,
     24, 24, 24, 24, 24, 24, 24, 24, 24,
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+    16,
+#endif
     16, 16, 16, 16, 16, 16,
     12, 12, 12, 12, 12,
     8, 8, 8, 8, 8, 8, 8, 8, 8,
@@ -304,38 +377,10 @@ static const uint16_t fan_value_table[FAN_TABLE_SIZE] = {
 #if SUPPORT_CONCEALED_KONG_AND_MELDED_KONG
     , 5
 #endif
+#if SUPPORT_BLESSINGS
+    , 8, 8, 8, 8
+#endif
 };
-
-/**
- * @brief 判断立牌是否包含和牌
- * 如果是，则必然不是和绝张
- *
- * @param [in] standing_tiles 立牌
- * @param [in] standing_cnt 立牌数
- * @param [in] win_tile 和牌张
- * @return bool
- */
-bool is_standing_tiles_contains_win_tile(const tile_t *standing_tiles, intptr_t standing_cnt, tile_t win_tile);
-
-/**
- * @brief 统计和牌在副露牌组中出现的张数
- * 如果出现3张，则必然和绝张
- *
- * @param [in] fixed_packs 副露牌组
- * @param [in] fixed_cnt 副露牌组数
- * @param [in] win_tile 和牌张
- * @return size_t
- */
-size_t count_win_tile_in_fixed_packs(const pack_t *fixed_packs, intptr_t fixed_cnt, tile_t win_tile);
-
-/**
- * @brief 判断副露牌组是否包含杠
- *
- * @param [in] fixed_packs 副露牌组
- * @param [in] fixed_cnt 副露牌组数
- * @return bool
- */
-bool is_fixed_packs_contains_kong(const pack_t *fixed_packs, intptr_t fixed_cnt);
 
 /**
  * end group

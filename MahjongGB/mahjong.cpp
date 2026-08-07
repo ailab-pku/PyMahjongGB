@@ -16,6 +16,47 @@ static const char* tile2str[34] = {
 "F1","F2","F3","F4","J1","J2","J3"
 };
 
+// The upstream algorithm now exposes only its localized fan-name table.  Keep
+// this table in the Python binding so verbose=True retains its established
+// (point, count, Chinese name, English name) return format.
+static const char *fan_name_en[] = {
+"None",
+"Big Four Winds", "Big Three Dragons", "All Green", "Nine Gates", "Four Kongs", "Seven Shifted Pairs", "Thirteen Orphans",
+"All Terminals", "Little Four Winds", "Little Three Dragons", "All Honors", "Four Concealed Pungs", "Pure Terminal Chows",
+"Quadruple Chow", "Four Pure Shifted Pungs",
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+"Four Pure Shifted Chows I", "Four Pure Shifted Chows II",
+#else
+"Four Pure Shifted Chows",
+#endif
+"Three Kongs", "All Terminals and Honors",
+"Seven Pairs", "Greater Honors and Knitted Tiles", "All Even Pungs", "Full Flush", "Pure Triple Chow", "Pure Shifted Pungs", "Upper Tiles", "Middle Tiles", "Lower Tiles",
+"Pure Straight", "Three-Suited Terminal Chows",
+#if DISTINGUISH_PURE_SHIFTED_CHOWS
+"Pure Shifted Chows I", "Pure Shifted Chows II",
+#else
+"Pure Shifted Chows",
+#endif
+"All Five", "Triple Pung", "Three Concealed Pungs",
+"Lesser Honors and Knitted Tiles", "Knitted Straight", "Upper Four", "Lower Four", "Big Three Winds",
+"Mixed Straight", "Reversible Tiles", "Mixed Triple Chow", "Mixed Shifted Pungs", "Chicken Hand", "Last Tile Draw", "Last Tile Claim", "Out with Replacement Tile", "Robbing The Kong",
+"All Pungs", "Half Flush", "Mixed Shifted Chows", "All Types", "Melded Hand", "Two Concealed Kongs", "Two Dragons Pungs",
+"Outside Hand", "Fully Concealed Hand", "Two Melded Kongs", "Last Tile",
+"Dragon Pung", "Prevalent Wind", "Seat Wind", "Concealed Hand", "All Chows", "Tile Hog", "Double Pung",
+"Two Concealed Pungs", "Concealed Kong", "All Simples",
+"Pure Double Chow", "Mixed Double Chow", "Short Straight", "Two Terminal Chows", "Pung of Terminals or Honors", "Melded Kong", "One Voided Suit", "No Honors", "Edge Wait", "Closed Wait", "Single Wait", "Self-Drawn",
+"Flower Tiles"
+#if SUPPORT_CONCEALED_KONG_AND_MELDED_KONG
+, "Concealed Kong and Melded Kong"
+#endif
+#if SUPPORT_BLESSINGS
+, "Blessing of Heaven", "Blessing of Earth", "Blessing of Human I", "Blessing of Human II"
+#endif
+};
+
+static_assert(sizeof(fan_name_en) / sizeof(fan_name_en[0]) == mahjong::FAN_TABLE_SIZE,
+    "The Python verbose fan-name table must match the upstream fan table");
+
 static void MahjongInit() {
 	for(int i = 1; i <= 9; ++i) {
 		str2tile["W" + to_string(i)] = mahjong::make_tile(TILE_SUIT_CHARACTERS, i);
@@ -69,7 +110,7 @@ SHANTEN_DOC_TEMPLATE(Thirteen Orphans, thirteen_orphans_shanten)
 SHANTEN_DOC_TEMPLATE(Seven Pairs, seven_pairs_shanten)
 SHANTEN_DOC_TEMPLATE(Honors And Knitted Tiles, honors_and_knitted_tiles_shanten)
 SHANTEN_DOC_TEMPLATE(Knitted Straight, knitted_straight_shanten)
-SHANTEN_DOC_TEMPLATE(Regular Form, basic_form_shanten)
+SHANTEN_DOC_TEMPLATE(Regular Form, regular_shanten)
 
 static PyObject *MahjongFanCalculator(PyObject *self, PyObject *args, PyObject *kwargs) {
 	try {
@@ -123,8 +164,8 @@ static PyObject *MahjongFanCalculator(PyObject *self, PyObject *args, PyObject *
 		calculate_param.flower_count = flowerCount;
 		calculate_param.win_flag = 
 			isSelfDrawn * WIN_FLAG_SELF_DRAWN +
-			is4thTile * WIN_FLAG_4TH_TILE +
-			isAboutKong * WIN_FLAG_ABOUT_KONG +
+			is4thTile * WIN_FLAG_LAST_TILE +
+			isAboutKong * WIN_FLAG_KONG_INVOLVED +
 			isWallLast * WIN_FLAG_WALL_LAST;
 		calculate_param.seat_wind = (mahjong::wind_t)seatWind;
 		calculate_param.prevalent_wind = (mahjong::wind_t)prevalentWind;
@@ -145,7 +186,7 @@ static PyObject *MahjongFanCalculator(PyObject *self, PyObject *args, PyObject *
 			if(fan_table[i]) {
 				PyObject *item;
 				if(!verbose) item = Py_BuildValue("is", mahjong::fan_value_table[i] * fan_table[i], mahjong::fan_name[i]);
-				else item = Py_BuildValue("iiss", mahjong::fan_value_table[i], fan_table[i], mahjong::fan_name[i], mahjong::fan_name_en[i]);
+				else item = Py_BuildValue("iiss", mahjong::fan_value_table[i], fan_table[i], mahjong::fan_name[i], fan_name_en[i]);
 				PyTuple_SetItem(ans, l++, item);
 			}
 		return ans;
@@ -199,7 +240,7 @@ static PyObject *MahjongShanten(PyObject *self, PyObject *args, PyObject *kwargs
 		re = min(re, mahjong::seven_pairs_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
 		re = min(re, mahjong::honors_and_knitted_tiles_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
 		re = min(re, mahjong::knitted_straight_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
-		re = min(re, mahjong::basic_form_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
+		re = min(re, mahjong::regular_shanten(hand_tiles.standing_tiles, hand_tiles.tile_count, nullptr));
 		if (re == numeric_limits<int>::max()) throw "ERROR_INVALID_HAND_OR_PACK";
 		PyObject *ans = Py_BuildValue("i", re);
 		return ans;
@@ -253,7 +294,7 @@ SHANTEN_TEMPLATE(ThirteenOrphansShanten, thirteen_orphans_shanten)
 SHANTEN_TEMPLATE(SevenPairsShanten, seven_pairs_shanten)
 SHANTEN_TEMPLATE(HonorsAndKnittedTilesShanten, honors_and_knitted_tiles_shanten)
 SHANTEN_TEMPLATE(KnittedStraightShanten, knitted_straight_shanten)
-SHANTEN_TEMPLATE(RegularShanten, basic_form_shanten)
+SHANTEN_TEMPLATE(RegularShanten, regular_shanten)
 
 #define SHANTEN_METHOD_TEMPLATE(name, func) \
 {#name, (PyCFunction)(void(*)(void))name, METH_VARARGS | METH_KEYWORDS, doc_##func},
@@ -266,7 +307,7 @@ static PyMethodDef methods[] = {
 	SHANTEN_METHOD_TEMPLATE(SevenPairsShanten, seven_pairs_shanten)
 	SHANTEN_METHOD_TEMPLATE(HonorsAndKnittedTilesShanten, honors_and_knitted_tiles_shanten)
 	SHANTEN_METHOD_TEMPLATE(KnittedStraightShanten, knitted_straight_shanten)
-	SHANTEN_METHOD_TEMPLATE(RegularShanten, basic_form_shanten)
+	SHANTEN_METHOD_TEMPLATE(RegularShanten, regular_shanten)
 	{NULL, NULL, 0, NULL},
 };
 
